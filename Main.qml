@@ -4,39 +4,34 @@ import QtQuick.Layouts
 
 Window {
     id: root
-    width: 900
-    height: 600
+    width: 1000
+    height: 700
     visible: true
     color: "#1e1e1e"
-    flags: Qt.Window | Qt.FramelessWindowHint // 타이틀바 제거
+
+    // [중요] Win + 방향키 단축키를 살리기 위해 FramelessWindowHint를 쓰지 않습니다.
+    // 대신 시스템 타이틀바를 커스텀할 수 있도록 아래 플래그들을 사용합니다.
+    flags: Qt.Window | Qt.CustomizeWindowHint | Qt.WindowTitleHint | Qt.WindowSystemMenuHint | Qt.WindowMinMaxButtonsHint | Qt.WindowCloseButtonHint
 
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
 
-        // --- 수정된 커스텀 타이틀 바 ---
+        // --- 네이티브 이동(에어로 스냅) 지원 타이틀 바 ---
         Rectangle {
             id: titleBar
             Layout.fillWidth: true
-            Layout.preferredHeight: 40
+            Layout.preferredHeight: 35
             color: "#2c2c2c"
 
-            // 1. 밀림 방지를 위한 MouseArea 방식 창 이동
+            // 1. 네이티브 윈도우 이동 명령 호출 (에러 수정 부분)
             MouseArea {
                 anchors.fill: parent
-                property point clickPos: "0,0"
+                // 클릭하는 순간 OS에게 "창 옮겨줘!"라고 권한을 넘깁니다.
+                // 이래야 윈도우가 '스냅' 기능을 인식합니다.
+                onPressed: root.startSystemMove()
 
-                onPressed: (mouse) => {
-                    clickPos = Qt.point(mouse.x, mouse.y)
-                }
-
-                onPositionChanged: (mouse) => {
-                    var delta = Qt.point(mouse.x - clickPos.x, mouse.y - clickPos.y)
-                    root.x += delta.x
-                    root.y += delta.y
-                }
-
-                // 더블 클릭 시 최대화/이전 크기 복원 (선택 사항)
+                // 더블 클릭 시 최대화/복구
                 onDoubleClicked: {
                     if (root.visibility === Window.Maximized) root.showNormal()
                     else root.showMaximized()
@@ -47,19 +42,27 @@ Window {
                 anchors.fill: parent
                 anchors.leftMargin: 10
                 anchors.rightMargin: 10
-                spacing: 15
-                // 이벤트가 MouseArea에 막히지 않도록 Z축 설정 가능
-                z: 1
+                spacing: 12
 
-                // A. 왼쪽 버튼 (버튼 위에서는 마우스 이벤트가 버튼으로 가야 함)
+                // A. 왼쪽 버튼 (MouseArea 위에 있어야 하므로 z값 설정)
                 Row {
                     spacing: 8
-                    Rectangle { width: 12; height: 12; radius: 6; color: "#ff5f56"; TapHandler { onTapped: Qt.quit() } }
-                    Rectangle { width: 12; height: 12; radius: 6; color: "#ffbd2e"; TapHandler { onTapped: root.showMinimized() } }
-                    Rectangle { width: 12; height: 12; radius: 6; color: "#27c93f"; TapHandler { onTapped: root.visibility === Window.Maximized ? root.showNormal() : root.showMaximized() } }
+                    z: 10
+                    Rectangle {
+                        width: 12; height: 12; radius: 6; color: "#ff5f56"
+                        MouseArea { anchors.fill: parent; onClicked: Qt.quit() }
+                    }
+                    Rectangle {
+                        width: 12; height: 12; radius: 6; color: "#ffbd2e"
+                        MouseArea { anchors.fill: parent; onClicked: root.showMinimized() }
+                    }
+                    Rectangle {
+                        width: 12; height: 12; radius: 6; color: "#27c93f"
+                        MouseArea { anchors.fill: parent; onClicked: root.visibility === Window.Maximized ? root.showNormal() : root.showMaximized() }
+                    }
                 }
 
-                // B. 중앙 검색바 (이미지와 동일하게 스타일링)
+                // B. 중앙 검색바 (VS Code 스타일)
                 Rectangle {
                     Layout.preferredWidth: 450
                     Layout.preferredHeight: 24
@@ -67,6 +70,7 @@ Window {
                     color: "#3d3d3d"
                     radius: 4
                     border.color: "#4d4d4d"
+                    z: 10 // 검색바 클릭 시 창이 드래그되지 않도록 위로 올림
 
                     RowLayout {
                         anchors.fill: parent
@@ -74,7 +78,7 @@ Window {
                         Text { text: "🔍"; color: "#858585"; font.pixelSize: 11 }
                         TextField {
                             Layout.fillWidth: true
-                            placeholderText: "Project Name (Search)"
+                            placeholderText: "Search Project (VS Code Style)"
                             color: "white"
                             font.pixelSize: 12
                             background: null
@@ -83,21 +87,22 @@ Window {
                     }
                 }
 
-                // 우측 여백 확보용 Item
+                // 우측 여백 (정렬용)
                 Item { Layout.fillWidth: true }
             }
         }
 
-        // 컨텐츠 영역
+        // 메인 컨텐츠
         Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
             color: "#1e1e1e"
             Text {
                 anchors.centerIn: parent
-                text: "hello world!"
-                color: "white"
-                font.pixelSize: 20
+                text: "Win + 방향키를 눌러보거나,\n상단바를 화면 끝으로 드래그해보세요."
+                color: "#aaaaaa"
+                horizontalAlignment: Text.AlignHCenter
+                font.pixelSize: 16
             }
         }
     }
