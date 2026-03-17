@@ -1,84 +1,101 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import QtQuick.Dialogs // 파일 탐색기를 위해 필요
 
 Window {
-    width: 600
-    height: 400
+    id: root
+    width: 900
+    height: 600
     visible: true
+    color: "#1e1e1e" // 전체 배경색 (VS Code 느낌)
 
-    // 1. 현재 파일 경로를 기억할 변수 (초기값은 비어있음)
+    // 1. 기본 타이틀바 제거
+    flags: Qt.Window | Qt.FramelessWindowHint
+
     property string currentFilePath: ""
-
-    // 2. 제목(title)을 변수와 연동 (파일이 없으면 '제목 없음', 있으면 경로 표시)
-    title: currentFilePath === "" ? "나의 메모장 - 제목 없음" : "나의 메모장 - " + currentFilePath
-
-
-    // 파일 열기 대화상자 수정
-    FileDialog {
-        id: openDialog
-        onAccepted: {
-            // 파일을 열 때 경로를 저장하고 제목을 바꿉니다.
-            currentFilePath = selectedFile.toString()
-            memoArea.text = fileIO.readFile(currentFilePath)
-            root.title = "메모장 - " + currentFilePath
-        }
-    }
-
-    // 파일 저장 대화상자 수정
-    FileDialog {
-        id: saveDialog
-        fileMode: FileDialog.SaveFile
-        onAccepted: {
-            // 새 이름으로 저장했을 때도 경로를 기억합니다.
-            currentFilePath = selectedFile.toString()
-            fileIO.saveFile(currentFilePath, memoArea.text)
-            root.title = "메모장 - " + currentFilePath
-        }
-    }
-
-    // 2. 단축키 로직 변경 (핵심!)
-    Shortcut {
-        sequence: "Ctrl+S"
-        context: Qt.ApplicationShortcut
-        onActivated: {
-            if (currentFilePath === "") {
-                // 저장된 경로가 없으면(새 문서) 대화상자를 띄움
-                saveDialog.open()
-            } else {
-                // 이미 열린 파일이 있으면 대화상자 없이 바로 C++ 호출!
-                let success = fileIO.saveFile(currentFilePath, memoArea.text)
-                if (success) {
-                    console.log("즉시 저장 완료: " + currentFilePath)
-                }
-            }
-        }
-    }
 
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
 
-        // 상단 버튼 바
-        RowLayout {
+        // --- 커스텀 타이틀 바 시작 ---
+        Rectangle {
+            id: titleBar
             Layout.fillWidth: true
-            Button { text: "열기"; onClicked: openDialog.open() }
-            Button { text: "저장"; onClicked: saveDialog.open() }
-            Button { text: "지우기"; onClicked: memoArea.clear() }
-        }
+            Layout.preferredHeight: 40
+            color: "#2c2c2c" // 타이틀바 배경색
 
-        // 텍스트 입력 영역
+            // 창 드래그 기능 (타이틀 바를 잡고 움직일 수 있게 함)
+            DragHandler {
+                onActiveChanged: if (active) root.startSystemMove()
+            }
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 10
+                anchors.rightMargin: 10
+                spacing: 15
+
+                // A. 왼쪽: 윈도우 조작 버튼 (macOS 스타일)
+                Row {
+                    spacing: 8
+                    Rectangle { width: 12; height: 12; radius: 6; color: "#ff5f56"; TapHandler { onTapped: Qt.quit() } }
+                    Rectangle { width: 12; height: 12; radius: 6; color: "#ffbd2e"; TapHandler { onTapped: root.showMinimized() } }
+                    Rectangle { width: 12; height: 12; radius: 6; color: "#27c93f"; TapHandler { onTapped: root.visibility === Window.Maximized ? root.showNormal() : root.showMaximized() } }
+                }
+
+                // B. 중앙: 검색 바 (핵심!)
+                Rectangle {
+                    Layout.preferredWidth: 400
+                    Layout.preferredHeight: 28
+                    Layout.alignment: Qt.AlignCenter
+                    color: "#3d3d3d"
+                    radius: 6
+                    border.color: "#555555"
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 8
+                        anchors.rightMargin: 8
+
+                        Text { text: "🔍"; color: "#aaaaaa"; font.pixelSize: 12 }
+
+                        TextField {
+                            id: topSearchInput
+                            Layout.fillWidth: true
+                            placeholderText: "Search Project..."
+                            color: "white"
+                            font.pixelSize: 13
+                            background: null // 배경 제거
+                            verticalAlignment: TextInput.AlignVCenter
+                        }
+                    }
+                }
+
+                // C. 오른쪽: 파일 이름 표시 (여백용)
+                Text {
+                    Layout.fillWidth: true
+                    text: currentFilePath === "" ? "Untitled" : currentFilePath
+                    color: "#888888"
+                    font.pixelSize: 12
+                    horizontalAlignment: Text.AlignRight
+                    elide: Text.ElideMiddle
+                }
+            }
+        }
+        // --- 커스텀 타이틀 바 끝 ---
+
+        // 기존 메모장 내용 영역
         ScrollView {
             Layout.fillWidth: true
             Layout.fillHeight: true
             TextArea {
                 id: memoArea
-                placeholderText: "여기에 내용을 입력하세요..."
+                color: "#d4d4d4"
                 font.pixelSize: 16
-                selectByMouse: true
+                placeholderText: "내용을 입력하세요..."
+                background: Rectangle { color: "#1e1e1e" }
             }
         }
     }
-
 }
