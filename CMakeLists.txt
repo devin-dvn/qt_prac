@@ -33,6 +33,7 @@ set_target_properties(appPrac01 PROPERTIES
 
 target_link_libraries(appPrac01
     PRIVATE Qt6::Quick
+    dwmapi  # <-- 이 부분 추가
 )
 
 install(TARGETS appPrac01
