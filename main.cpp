@@ -7,15 +7,50 @@
 #include <QQmlContext>  // 1. 이 헤더가 있어야 합니다.
 #include "fileio.h"     // 2. 작성하신 클래스 헤더
 
-// 윈도우 메시지를 가로채서 타이틀바를 지우는 클래스
 class WinEventFilter : public QAbstractNativeEventFilter {
 public:
-    bool nativeEventFilter(const QByteArray &eventType, void *message, qintptr *) override {
+    bool nativeEventFilter(const QByteArray &eventType, void *message, qintptr *result) override {
         if (eventType == "windows_generic_MSG") {
             MSG *msg = static_cast<MSG *>(message);
-            if (msg->message == WM_NCCALCSIZE && msg->wParam == TRUE) {
-                // 타이틀바 영역을 없애고 클라이언트 영역을 창 전체로 확장
+
+            // [추가] 배경 지우기 메시지 차단 (깜빡임 및 검은 배경 방지)
+            if (msg->message == WM_ERASEBKGND) {
+                *result = 1;
                 return true;
+            }
+
+            if (msg->message == WM_NCCALCSIZE && msg->wParam == TRUE) {
+                return true;
+            }
+
+            if (msg->message == WM_NCHITTEST) {
+                const int borderWidth = 8;
+                POINTS pts = MAKEPOINTS(msg->lParam);
+                POINT pt = { pts.x, pts.y };
+                RECT rect;
+                GetWindowRect(msg->hwnd, &rect);
+
+                bool left = pt.x < rect.left + borderWidth;
+                bool right = pt.x >= rect.right - borderWidth;
+                bool top = pt.y < rect.top + borderWidth;
+                bool bottom = pt.y >= rect.bottom - borderWidth;
+
+                LRESULT hit = HTCLIENT;
+
+                if (top && left) hit = HTTOPLEFT;
+                else if (top && right) hit = HTTOPRIGHT;
+                else if (bottom && left) hit = HTBOTTOMLEFT;
+                else if (bottom && right) hit = HTBOTTOMRIGHT;
+                else if (top) hit = HTTOP;
+                else if (bottom) hit = HTBOTTOM;
+                else if (left) hit = HTLEFT;
+                else if (right) hit = HTRIGHT;
+                else if (pt.y < rect.top + 35) hit = HTCAPTION;
+
+                if (hit != HTCLIENT) {
+                    *result = hit;
+                    return true;
+                }
             }
         }
         return false;
@@ -50,15 +85,17 @@ int main(int argc, char *argv[])
         if (window) {
             HWND hwnd = (HWND)window->winId();
 
-            // 기존 스타일 유지 + 스냅을 위한 프레임 유지
+            // 1. 기존 스타일 설정
             LONG_PTR style = GetWindowLongPtr(hwnd, GWL_STYLE);
             style |= WS_THICKFRAME | WS_CAPTION | WS_MAXIMIZEBOX | WS_MINIMIZEBOX;
             SetWindowLongPtr(hwnd, GWL_STYLE, style);
 
-            // 그림자 및 에어로 기능을 위한 DWM 확장
+            // 2. [추가] 배경 브러시 제거 (검은색 잔상 방지 핵심)
+            SetClassLongPtr(hwnd, GCLP_HBRBACKGROUND, (LONG_PTR)NULL);
+
+            // 3. DWM 확장 및 업데이트
             MARGINS margins = {1, 1, 1, 1};
             DwmExtendFrameIntoClientArea(hwnd, &margins);
-
             SetWindowPos(hwnd, nullptr, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
         }
     }

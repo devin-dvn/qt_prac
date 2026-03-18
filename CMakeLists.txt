@@ -33,7 +33,8 @@ set_target_properties(appPrac01 PROPERTIES
 
 target_link_libraries(appPrac01
     PRIVATE Qt6::Quick
-    dwmapi  # <-- 이 부분 추가
+    dwmapi    # DwmExtendFrameIntoClientArea 사용을 위해 필요
+    user32    # GetWindowLongPtr, SetWindowPos 등 Win32 API 사용을 위해 필요
 )
 
 install(TARGETS appPrac01

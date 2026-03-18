@@ -11,7 +11,7 @@ Window {
 
     // [중요] Win + 방향키 단축키를 살리기 위해 FramelessWindowHint를 쓰지 않습니다.
     // 대신 시스템 타이틀바를 커스텀할 수 있도록 아래 플래그들을 사용합니다.
-    flags: Qt.Window | Qt.CustomizeWindowHint | Qt.WindowTitleHint | Qt.WindowSystemMenuHint | Qt.WindowMinMaxButtonsHint | Qt.WindowCloseButtonHint
+    // flags: Qt.Window | Qt.CustomizeWindowHint | Qt.WindowTitleHint | Qt.WindowSystemMenuHint | Qt.WindowMinMaxButtonsHint | Qt.WindowCloseButtonHint
 
     ColumnLayout {
         anchors.fill: parent
